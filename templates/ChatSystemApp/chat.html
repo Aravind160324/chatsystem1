@@ -1,0 +1,105 @@
+{% extends 'ChatSystemApp/base.html' %}
+{% load static %}
+{% block Content %}
+    <link rel="stylesheet" href="{% static 'css/chatPages.css' %}">
+    <div class="main-body">
+        <div class="user-profile">
+            <div class="profile-logo">
+                <div class="logo-letter">
+                    <span>{{user.username|slice:'1'|upper}}</span>
+                </div>
+            </div>
+            <div class="profile-name">
+                <div class="name">
+                    <p>{{user.username}}</p>
+                </div>
+            </div>
+            <div class="profile-friends">
+                <div class="friends-count">
+                    <div class="count">
+                        <span>{{friends_count}}</span>
+                    </div>
+                    <div class="symbol">
+                        <span>Friends</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="friends-search">
+            <div class="request-btn">
+                {% if follow %}
+                    <a href="{% url 'createFollow' request.user.id user.id %}">Following</a>
+                {% elif requested %}
+                    <a href="{% url 'createFollow' request.user.id user.id %}">Requested</a>
+                {% elif follow_back %}
+                    <a href="{% url 'createFollow' request.user.id user.id %}">Follow Back</a>
+                {% else %}
+                    <a href="{% url 'createFollow' request.user.id user.id %}">Follow</a>
+                {% endif %}
+            </div>
+        </div>
+        {% if follow %}
+            <div class="message-container">
+                <div class="message-field">
+                </div>
+                <div class="message-input">
+                    <form action="" method="POST">
+                        {% csrf_token %}
+                        <div class="input-div">
+                            <input type="text" name="msg" placeholder="Text">
+                        </div>
+                        <div class="btn-div">
+                            <button type="submit">Send</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="not-follow">
+                <p>Private Chat</p>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        $(document).ready(function(){
+            let messageField = document.querySelector('.message-field');
+            messageField.scrollTop = messageField.scrollHeight;
+            let bottom = true;
+            messageField.addEventListener('scroll',function(e) {
+                if(Math.round(messageField.scrollTop) + messageField.clientHeight == messageField.scrollHeight) {
+                    bottom = true;
+                }
+                else {
+                    bottom = false;
+                }
+            });
+            setInterval(function(){
+                if(bottom == true) {
+                    messageField.scrollTop = messageField.scrollHeight;
+                }
+                $.ajax({
+                    type:'GET',
+                    url:'{% url "getMessages" request.user.id user.id %}',
+                    success:function(response){
+                        $('.message-field').empty();
+                        for(let key in response.chat_messages){
+                            let msg;
+                            if('{{follower.id}}' == response.chat_messages[key].follower_id){
+                                let message_id = String(response.chat_messages[key].id);
+                                let deleteUrl = '{% url "deleteMessage" request.user.id user.id 0 %}'.replace('0', message_id);
+                                msg='<div class="message-box-right">'+'<div class="message-time">'+'<div class="time-div">'+'<span>'+response.chat_messages[key].time.slice(0,10) + '/' + response.chat_messages[key].time.slice(11,16)+'</span>'+'</div>'+'<div class="delete-div">'+'<a href="' + deleteUrl + '"><i class="fa-solid fa-trash"></i></a>'+'</div>'+'</div>'+'<div class="message-text">'+'<p>'+response.chat_messages[key].message+'</p>'+'</div>'+'</div>';
+                            }
+                            else{
+                                msg='<div class="message-box-left">'+'<div class="message-time">'+'<div class="time-div">'+'<span>'+response.chat_messages[key].time.slice(0,10) + '/' + response.chat_messages[key].time.slice(11,16)+'</span>'+'</div>'+'</div>'+'<div class="message-text">'+'<p>'+response.chat_messages[key].message+'</p>'+'</div>'+'</div>';
+                            }
+                            $('.message-field').append(msg);
+                        }
+                    },
+                    error:function(response){
+                        alert('An Error');
+                    },
+                });
+            },1000);
+        });
+    </script>
+{% endblock %}
